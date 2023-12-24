@@ -1,0 +1,139 @@
+from flask import Flask, render_template, Response
+from flask_socketio import SocketIO
+import YogaPose
+import mediapipe as mp
+import cv2
+
+app = Flask(__name__)
+
+socket = SocketIO(app)
+
+global camera
+
+
+def landVal(i, j):
+    # Define a dictionary to map positions to values
+    position_mapping = {
+        (0, 1): 13,  # left elbow
+        (0, 2): 14,  # right elbow
+        (1, 1): 26,  # right knee
+        (1, 2): 27,  # left knee
+        (2, 1): 12,  # right shoulder
+        (2, 2): 11,  # left shoulder
+        (3, 1): 23,  # left hip
+        (3, 2): 24  # right hip
+    }
+
+    # Check if the position is in the dictionary, otherwise return IndexError
+    try:
+        return position_mapping[(i, j)]
+    except KeyError:
+        return IndexError
+
+
+class CamInput:
+    def __init__(self) -> None:
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_pose = mp.solutions.pose
+        self.camera = cv2.VideoCapture(0)
+        self.sample_dic = {
+            'Adho Mukha Svanasana': [195.14735572565294, 193.0672851212811, 182.16912170627177, 181.03078806137646,
+                                     176.431833096212, 177.12960182226564, 51.74293164653543, 53.93222706873304],
+            'Adho Mukha Vrksasana': [255.6711619338636, 260.65708481542066, 181.89013156094956, 180.5894624280866,
+                                     103.02848555668199, 114.48437692932973, 218.59562434868067, 225.81462820684044]}
+
+        self.yoga = YogaPose.MatchYogaPos(self.sample_dic)
+        self.obj = YogaPose.MatchYogaPos2(self.sample_dic)
+
+        self.height = 640
+        self.width = 640
+        self.text = 'good'
+        self.fontFace = cv2.FONT_HERSHEY_SIMPLEX
+        self.fontScale = 0.5
+        self.color = (0, 225, 0)  # Color in BGR format
+        self.thickness = 1
+        self.lineType = cv2.LINE_AA
+        self.x1 = 10
+        self.y1 = 10
+        self.org = (self.x1, self.y1)
+
+    def gen_frames(self):
+        sleep = False
+        with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+            while self.camera.isOpened():
+
+                success, frame = self.camera.read()
+
+                if not success:
+                    break
+                else:
+                    image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                    image.flags.writeable = False
+
+                    res = pose.process(image)
+                    image.flags.writeable = True
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+                self.mp_drawing.draw_landmarks(
+                    image,
+                    res.pose_landmarks,
+                    self.mp_pose.POSE_CONNECTIONS,
+                )
+
+                if res.pose_landmarks:
+                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Adho Mukha Svanasana')
+
+                    for i in range(4):
+                        if not temp_list[i][0]:
+                            for j in range(1, 3):
+                                text1 = str(round(temp_list[i][j]))
+                                x1 = int(res.pose_landmarks.landmark[landVal(i, j)].x * self.width) + 3
+                                y1 = int(res.pose_landmarks.landmark[landVal(i, j)].y * self.height) + 3
+                                org1 = (x1, y1)
+                                color = (0, 0, 225)
+                                cv2.putText(image, text1, org1, self.fontFace, self.fontScale, color, self.thickness,
+                                            self.lineType)
+                        elif temp_list[i][0]:
+                            for j in range(1, 3):
+                                color = (0, 225, 0)
+                                x1 = int(res.pose_landmarks.landmark[landVal(i, j)].x * self.width) + 3
+                                y1 = int(res.pose_landmarks.landmark[landVal(i, j)].y * self.height) + 3
+                                org1 = (x1, y1)
+                                cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color, self.thickness,
+                                            self.lineType)
+
+                ret, buffer = cv2.imencode('.jpg', image)
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+    def close_cam(self):
+        self.camera.release()
+
+
+global cam_obj
+
+
+@app.route('/')
+def home():
+    global cam_obj
+    cam_obj = CamInput()
+    return render_template('index.html')
+
+
+@app.route('/video_feed')
+def video_feed():
+    return Response(cam_obj.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/close_webcam', methods=['POST'])
+def close_webcam():
+    global camera
+    global cam_obj
+    # Release the camera resources
+    cam_obj.close_cam()
+    return "Webcam Closed"
+
+
+if __name__ == "__main__":
+    socket.run(app, allow_unsafe_werkzeug=True, debug=True)
