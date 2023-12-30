@@ -169,7 +169,7 @@ class MatchYogaPos:
 class MatchYogaPos2:
 
     def __init__(self):
-        with open('C:\programs\projects\yoga_pos\connection\poses_data.json', 'r') as json_file:
+        with open('C:\programs\projects\yoga_pos\git code\YogaCorrector\poses_data.json', 'r') as json_file:
             poses_data = json.load(json_file)
         
         self.angle_list = poses_data

@@ -36,14 +36,7 @@ class CamInput:
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
         self.camera = cv2.VideoCapture(0)
-        self.sample_dic = {
-            'Adho Mukha Svanasana': [195.14735572565294, 193.0672851212811, 182.16912170627177, 181.03078806137646,
-                                     176.431833096212, 177.12960182226564, 51.74293164653543, 53.93222706873304],
-            'Adho Mukha Vrksasana': [255.6711619338636, 260.65708481542066, 181.89013156094956, 180.5894624280866,
-                                     103.02848555668199, 114.48437692932973, 218.59562434868067, 225.81462820684044]}
-
-        self.yoga = YogaPose.MatchYogaPos(self.sample_dic)
-        self.obj = YogaPose.MatchYogaPos2(self.sample_dic)
+        self.obj = YogaPose.MatchYogaPos2()
 
         self.height = 640
         self.width = 640
