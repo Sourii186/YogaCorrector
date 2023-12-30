@@ -131,43 +131,6 @@ def somefuntion(landmarks):
 #main class
 class MatchYogaPos:
 
-    def __init__(self,angles):
-        self.angle_list =  angles
-       
-    
-    def compare(self,angles:list,refAngles:list):
-        
-        err = 30
-        angles.sort()
-        refAngles.sort()
-    
-        print(abs(angles[0]-refAngles[0]))
-        print(abs(angles[1]-refAngles[1]))
-        if abs(angles[0]-refAngles[0]) < err and abs(angles[1]-refAngles[1]) < err:
-            return True
-        else:
-            return False
-        
-    
-    def matchYogaPos(self,img_landmarks,posName):
-        
-        ref_angles = self.angle_list[posName]
-        angles = somefuntion(img_landmarks)
-        bool_list = []
-        bool_list.append(self.compare([angles[0],angles[1]],[ref_angles[0],ref_angles[1]]))
-        bool_list.append(self.compare([angles[2],angles[3]],[ref_angles[2],ref_angles[3]]))
-        bool_list.append(self.compare([angles[4],angles[5]],[ref_angles[4],ref_angles[5]])) 
-        bool_list.append(self.compare([angles[6],angles[7]],[ref_angles[6],ref_angles[7]]))
-
-        index = -1
-        for i in bool_list:
-            
-            index += 1 
-            if i == False:
-                print(index)
-
-class MatchYogaPos2:
-
     def __init__(self):
         with open('C:\programs\projects\yoga_pos\git code\YogaCorrector\poses_data.json', 'r') as json_file:
             poses_data = json.load(json_file)

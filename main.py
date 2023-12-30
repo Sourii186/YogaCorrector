@@ -36,7 +36,7 @@ class CamInput:
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
         self.camera = cv2.VideoCapture(0)
-        self.obj = YogaPose.MatchYogaPos2()
+        self.obj = YogaPose.MatchYogaPos()
 
         self.height = 640
         self.width = 640
@@ -51,7 +51,6 @@ class CamInput:
         self.org = (self.x1, self.y1)
 
     def gen_frames(self):
-        sleep = False
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
 
@@ -74,7 +73,7 @@ class CamInput:
                 )
 
                 if res.pose_landmarks:
-                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Adho Mukha Svanasana')
+                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Halasana')
 
                     for i in range(4):
                         if not temp_list[i][0]:
@@ -103,9 +102,7 @@ class CamInput:
     def close_cam(self):
         self.camera.release()
 
-
 global cam_obj
-
 
 @app.route('/')
 def home():
