@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <title>Document</title>
+    <style>
+        .dropdown-element{
+            margin-left: 100px;
+        }
+    </style>
+    <script>
+        function posesList()
+        {
+            var d=document.getElementById("posesList");
+            var displayText = d.options[d.selectedIndex].text; // use vardisplay text in main . py
+            document.getElementById("textvalue").value=displayText;
+        }
+    </script>
+</head>
+<body style="background-color: black;">
+    <div class="main">
+        <h1 style="margin-top:150px;margin-left:100px;font-size:50px;color:white"><b>Yoga Asana Corrector</b></h1>
+        <h5 style="margin-left:100px;font-size:15px;color:white;margin-top:20px">Select An Asana</h5>\
+        <div class="dropdown-element">
+            <!-- <input type="text" id="autocomplete" name="poses" list="posesList"> -->
+            <select id="posesList" onchange="posesList();">
+                <option value="">Choose some assannnaaaa</option>
+                <option value="Adho Mukha Svanasana">Adho Mukha Svanasana</option>
+                <option value="Adho Mukha Vrksasana">Adho Mukha Vrksasana</option>
+                <option value="Alanasana">Alanasana</option>
+                <option value="Anjaneyasana">Anjaneyasana</option>
+                <option value="Ardha Chandrasana">Ardha Chandrasana</option>
+                <option value="Ardha Matsyendrasana">Ardha Matsyendrasana</option>
+                <option value="Ardha Navasana">Ardha Navasana</option>
+                <option value="Ardha Pincha Mayurasana">Ardha Pincha Mayurasana</option>
+                <option value="Ashta Chandrasana">Ashta Chandrasana</option>
+                <option value="Baddha Konasana">Baddha Konasana</option>
+                <option value="Bakasana">Bakasana</option>
+                <option value="Balasana">Balasana</option>
+                <option value="Bitilasana">Bitilasana</option>
+                <option value="Camatkarasana">Camatkarasana</option>
+                <option value="Dhanurasana">Dhanurasana</option>
+                <option value="Eka Pada Rajakapotasana">Eka Pada Rajakapotasana</option>
+                <option value="Garudasana">Garudasana</option>
+                <option value="Halasana">Halasana</option>
+                <option value="Hanumanasana">Hanumanasana</option>
+                <option value="Malasana">Malasana</option>
+                <option value="Marjaryasana">Marjaryasana</option>
+                <option value="Navasana">Navasana</option>
+                <option value="Padmasana">Padmasana</option>
+                <option value="Parsva Virabhadrasana">Parsva Virabhadrasana</option>
+                <option value="Parsvottanasana">Parsvottanasana</option>
+                <option value="Paschimottanasana">Paschimottanasana</option>
+                <option value="Phalakasana">Phalakasana</option>
+                <option value="Pincha Mayurasana">Pincha Mayurasana</option>
+                <option value="Salamba Bhujangasana">Salamba Bhujangasana</option>
+                <option value="Salamba Sarvangasana">Salamba Sarvangasana</option>
+                <option value="Setu Bandha Sarvangasana">Setu Bandha Sarvangasana</option>
+                <option value="Sivasana">Sivasana</option>
+                <option value="Supta Kapotasana">Supta Kapotasana</option>
+                <option value="Trikonasana">Trikonasana</option>
+                <option value="Upavistha Konasana">Upavistha Konasana</option>
+                <option value="Urdhva Dhanurasana">Urdhva Dhanurasana</option>
+                <option value="Urdhva Mukha Svsnssana">Urdhva Mukha Svsnssana</option>
+                <option value="Ustrasana">Ustrasana</option>
+                <option value="Utkatasana">Utkatasana</option>
+                <option value="Uttanasana">Uttanasana</option>
+                <option value="Utthita Hasta Padangusthasana">Utthita Hasta Padangusthasana</option>
+                <option value="Utthita Parsvakonasana">Utthita Parsvakonasana</option>
+                <option value="Vasisthasana">Vasisthasana</option>
+                <option value="Vrksasana">Vrksasana</option>
+                </select>
+            <button type="button" class="btn btn-light" id="btn1">SELECT</button>
+            <input type="text" id="textvalue">
+        </div>
+        <!-- <div id="result"></div>
+        <script>
+            posesList.onchange = function () {
+                result.innerHTML = this.value;
+
+            } -->
+        </script>
+        <h3 style="margin-left:100px;font-size:15px;color:white">You Selected:</h3>
+        <h3 id="selected" style="color: white;"></h3>
+        <h5 style="margin-left:100px;font-size:15px;color:white">Proceed</h5>
+        <h1 style="margin-left:100px;font-size:50px;color:white">Experimental Info</h1>
+        <h5 style="margin-left:100px;font-size:15px;color:white">You have selected: None</h5>
+    </div>
+    <script>
+        var text1=document.getElementById('autocomplete');
+        var btn=document.getElementById('btn1');
+        var disp=document.getElementById('selected');
+        function display1(){
+            disp.innerHTML=text1.value;
+            console.log(disp.value);
+        }
+        console.log(text1.value);
+        btn.addEventListener('click',disp);
+    </script>
+</body>
+</html>
