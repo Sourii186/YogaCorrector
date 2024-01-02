@@ -3,6 +3,8 @@ from flask_socketio import SocketIO
 import YogaPose
 import mediapipe as mp
 import cv2
+import time
+import os
 
 app = Flask(__name__)
 
@@ -30,6 +32,8 @@ def landVal(i, j):
     except KeyError:
         return IndexError
 
+def clear_terminal():
+    os.system('cls')
 
 class CamInput:
     def __init__(self) -> None:
@@ -49,12 +53,20 @@ class CamInput:
         self.x1 = 10
         self.y1 = 10
         self.org = (self.x1, self.y1)
+        self.isStarted = False
 
     def gen_frames(self):
+        self.frame_count = 0
+        frameRate = 30
+        timegiven = 5
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
-
                 success, frame = self.camera.read()
+                if self.isStarted == True and self.frame_count < (frameRate*timegiven):
+                    self.frame_count += 1
+                elif self.isStarted == True and self.frame_count == (frameRate*timegiven):
+                    print('time up')
+                    self.isStarted = False
 
                 if not success:
                     break
@@ -73,7 +85,7 @@ class CamInput:
                 )
 
                 if res.pose_landmarks:
-                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Halasana')
+                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Trikonasana')
 
                     for i in range(4):
                         if not temp_list[i][0]:
@@ -115,6 +127,11 @@ def home():
 def video_feed():
     return Response(cam_obj.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/start', methods=['POST'])
+def start():
+    cam_obj.isStarted = not cam_obj.isStarted #for testing only
+    #cam_obj.isStarted = True
+    return 'pose started'
 
 @app.route('/close_webcam', methods=['POST'])
 def close_webcam():
@@ -123,7 +140,6 @@ def close_webcam():
     # Release the camera resources
     cam_obj.close_cam()
     return "Webcam Closed"
-
 
 if __name__ == "__main__":
     socket.run(app, allow_unsafe_werkzeug=True, debug=True)
