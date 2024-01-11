@@ -1,9 +1,8 @@
-from flask import Flask, render_template, Response
-from flask_socketio import SocketIO
+from flask import Flask, render_template, Response, url_for, request, redirect, jsonify
+from flask_socketio import SocketIO, emit
 import YogaPose
 import mediapipe as mp
 import cv2
-import time
 import os
 
 app = Flask(__name__)
@@ -11,6 +10,7 @@ app = Flask(__name__)
 socket = SocketIO(app)
 
 global camera
+global yogaPose
 
 
 def landVal(i, j):
@@ -32,8 +32,15 @@ def landVal(i, j):
     except KeyError:
         return IndexError
 
+
 def clear_terminal():
     os.system('cls')
+
+
+def checkPoseCompletion(bool_list):
+    is_proper_pose = all(result[0] for result in bool_list)
+    return is_proper_pose
+
 
 class CamInput:
     def __init__(self) -> None:
@@ -54,19 +61,15 @@ class CamInput:
         self.y1 = 10
         self.org = (self.x1, self.y1)
         self.isStarted = False
+        self.isPoseCorrect = False
 
-    def gen_frames(self):
+    def gen_frames(self, socket):
         self.frame_count = 0
         frameRate = 30
         timegiven = 5
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
                 success, frame = self.camera.read()
-                if self.isStarted == True and self.frame_count < (frameRate*timegiven):
-                    self.frame_count += 1
-                elif self.isStarted == True and self.frame_count == (frameRate*timegiven):
-                    print('time up')
-                    self.isStarted = False
 
                 if not success:
                     break
@@ -85,7 +88,13 @@ class CamInput:
                 )
 
                 if res.pose_landmarks:
-                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Trikonasana')
+                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, yogaPose)
+
+                    if not self.isPoseCorrect:
+                        if checkPoseCompletion(temp_list):
+                            self.isPoseCorrect = True
+                            print(self.isPoseCorrect)
+                            socket.emit('complete')
 
                     for i in range(4):
                         if not temp_list[i][0]:
@@ -103,7 +112,8 @@ class CamInput:
                                 x1 = int(res.pose_landmarks.landmark[landVal(i, j)].x * self.width) + 3
                                 y1 = int(res.pose_landmarks.landmark[landVal(i, j)].y * self.height) + 3
                                 org1 = (x1, y1)
-                                cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color, self.thickness,
+                                cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color,
+                                            self.thickness,
                                             self.lineType)
 
                 ret, buffer = cv2.imencode('.jpg', image)
@@ -114,24 +124,36 @@ class CamInput:
     def close_cam(self):
         self.camera.release()
 
+
 global cam_obj
+
 
 @app.route('/')
 def home():
+    json_url = url_for('static', filename='json/pose_details.json')
+    return render_template('index.html', json_url=json_url)
+
+
+@app.route('/perform', methods=['POST'])
+def perform():
+    global yogaPose
+    yogaPose = request.form.get('selected_pose')
+    print(yogaPose)
+    return redirect(url_for('yoga'))
+
+
+@app.route('/yoga')
+def yoga():
     global cam_obj
     cam_obj = CamInput()
-    return render_template('index.html')
+
+    return render_template('yoga.html', pose=yogaPose, poseComplete=cam_obj.isPoseCorrect)
 
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(cam_obj.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(cam_obj.gen_frames(socket), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/start', methods=['POST'])
-def start():
-    cam_obj.isStarted = not cam_obj.isStarted #for testing only
-    #cam_obj.isStarted = True
-    return 'pose started'
 
 @app.route('/close_webcam', methods=['POST'])
 def close_webcam():
@@ -140,6 +162,12 @@ def close_webcam():
     # Release the camera resources
     cam_obj.close_cam()
     return "Webcam Closed"
+
+
+@socket.on('connect')
+def connect():
+    print('Socket Connected')
+
 
 if __name__ == "__main__":
     socket.run(app, allow_unsafe_werkzeug=True, debug=True)
