@@ -38,11 +38,18 @@ var socket;
 var timerId;
 
 function start() {
+    
     // Call the function to start the socket
     startSocket();
-
+    
     // Call the function to start the timer
     startTimer();
+    
+    //to change the start text in the button
+    var buttonElement = document.querySelector('.btn');
+    console.log(buttonElement)
+    // Change the text content
+    buttonElement.textContent = 'Started';
 }
 
 function startSocket() {
