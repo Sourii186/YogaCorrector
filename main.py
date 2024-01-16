@@ -127,7 +127,7 @@ class CamInput:
 
 global cam_obj
 
-
+#hello
 @app.route('/')
 def home():
     json_url = url_for('static', filename='json/pose_details.json')
