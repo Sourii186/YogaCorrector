@@ -65,8 +65,6 @@ class CamInput:
 
     def gen_frames(self, socket):
         self.frame_count = 0
-        frameRate = 30
-        timegiven = 5
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
                 success, frame = self.camera.read()
