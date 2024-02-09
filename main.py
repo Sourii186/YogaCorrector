@@ -4,6 +4,7 @@ import YogaPose
 import mediapipe as mp
 import cv2
 import os
+import heatmap
 
 app = Flask(__name__)
 
@@ -11,6 +12,8 @@ socket = SocketIO(app)
 
 global camera
 global yogaPose
+global genHeatMap 
+
 
 
 def landVal(i, j):
@@ -44,6 +47,7 @@ def checkPoseCompletion(bool_list):
 
 class CamInput:
     def __init__(self) -> None:
+      
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
         self.camera = cv2.VideoCapture(0)
@@ -62,9 +66,16 @@ class CamInput:
         self.org = (self.x1, self.y1)
         self.isStarted = False
         self.isPoseCorrect = False
+        self.done = False
+
+    def genHeatMap(self,tempList):
+        obj = heatmap.heatMap()
+        obj.createHeatmap(tempList)
 
     def gen_frames(self, socket):
         self.frame_count = 0
+        global genHeatMap
+        genHeatMap = False
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
                 success, frame = self.camera.read()
@@ -113,6 +124,11 @@ class CamInput:
                                 cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color,
                                             self.thickness,
                                             self.lineType)
+
+                if genHeatMap == True and self.done == False:
+                    self.genHeatMap(temp_list)
+                    self.done = True
+        
 
                 ret, buffer = cv2.imencode('.jpg', image)
                 frame = buffer.tobytes()
@@ -166,6 +182,10 @@ def close_webcam():
 def connect():
     print('Socket Connected')
 
+@socket.on('heatmap')
+def conn():
+    global genHeatMap
+    genHeatMap = True 
 
 if __name__ == "__main__":
     socket.run(app, allow_unsafe_werkzeug=True, debug=True)

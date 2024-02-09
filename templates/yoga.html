@@ -26,8 +26,10 @@
                 </div>
                 <hr style="margin: 8% auto 0 auto;" width="50%"/>
                 <div style="padding-top: 8%; text-align: center; max-width: 100%">
-                     <button type="button" class="btn btn-outline-dark btn-lg px-3 py-1 md-2 fw-bold" onclick="start()">Start</button>
+                    <button type="button" id='startButton' class="btn btn-outline-dark btn-lg px-3 py-1 md-2 fw-bold" onclick="start()">Start</button>
+                    <button type="button" id='getHeatmap' class="btn btn-outline-dark btn-lg px-3 py-1 md-2 fw-bold" onclick="getHeatmap()">Start>Get heatMap</button>
                 </div>
+
             </div>
         </div>
     </div>
@@ -36,6 +38,8 @@
 <script>
 var socket;
 var timerId;
+var start;
+var end;
 
 function start() {
     
@@ -43,10 +47,10 @@ function start() {
     startSocket();
     
     // Call the function to start the timer
-    startTimer();
+    // startTimer();
     
     //to change the start text in the button
-    var buttonElement = document.querySelector('.btn');
+    var buttonElement = document.getElementById('startButton');
     console.log(buttonElement)
     // Change the text content
     buttonElement.textContent = 'Started';
@@ -55,6 +59,7 @@ function start() {
 function startSocket() {
     socket = io.connect();
     socket.on('connect', function() {
+    start = new Date().getTime();
         console.log("connected");
     });
 
@@ -62,20 +67,37 @@ function startSocket() {
         var poseStatus = document.getElementById('poseStatus');
         poseStatus.innerHTML = "Pose Complete"
         poseStatus.style.color = "green";
-
+        end = new Date().getTime();
+        var time = end - start;
+        console.log(time);
         // Stop the timer when the 'complete' event is triggered
+        if (Math.round(time/1000) < 45)
+        {
+            var ele = document.getElementById('poseStatus')
+            ele.style.color = "red";
+            ele.innerText = "You took "+ Math.round(time/1000)+" sec";
+        }
+        else{
+            document.getElementById('poseStatus').innerText = "pose comepleted on time";
+        }
         clearTimeout(timerId);
+
     });
 }
 
-function startTimer() {
-    // Set the timer for 5 seconds (5000 milliseconds)
-    timerId = setTimeout(function() {
-        console.log("Timer expired. Updating element...");
-        socket.disconnect();
-        document.getElementById('poseStatus').innerText = 'Timer ran out.';
-    }, 5000);
+function getHeatmap() {
+    socket.emit('heatmap')
+    
 }
+
+// function startTimer() {
+//     // Set the timer for 5 seconds (5000 milliseconds)
+//     timerId = setTimeout(function() {
+//         console.log("Timer expired. Updating element...");
+//         socket.disconnect();
+//         document.getElementById('poseStatus').innerText = 'Timer ran out.';
+//     }, 5000);
+// }
     
 </script>
 
