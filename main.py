@@ -5,6 +5,8 @@ import mediapipe as mp
 import cv2
 import os
 import heatmap
+import threading
+import pyttsx3
 
 app = Flask(__name__)
 
@@ -72,10 +74,37 @@ class CamInput:
         obj = heatmap.heatMap()
         obj.createHeatmap(tempList)
 
+    def speak(self,tempList):
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 150)  # Speed of speech
+        parts = []
+
+        body_parts = {
+            0: "elbow",
+            1: "knee",
+            2: "shoulder",
+            3: "hip",
+        }
+
+        for i in range(4):
+            if not tempList[i][0]:
+                parts.append(body_parts[i])
+        
+        if len(body_parts) > 1:
+            part = ', '.join(parts[:-1]) + ', and ' + parts[-1]
+        else:
+            part = parts[0]
+        
+        to_say = f'Correct your {part}'
+        engine.say(to_say)
+        engine.runAndWait()
+
     def gen_frames(self, socket):
         self.frame_count = 0
         global genHeatMap
         genHeatMap = False
+        tts_thread = threading.Thread(target=self.speak)
+        tts_thread.start()
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
                 success, frame = self.camera.read()
@@ -128,7 +157,12 @@ class CamInput:
                 if genHeatMap == True and self.done == False:
                     self.genHeatMap(temp_list)
                     self.done = True
-        
+                
+                self.frame_count += 1
+
+                if self.frame_count%500 == 0:               
+                    self.speak(temp_list)
+                      
 
                 ret, buffer = cv2.imencode('.jpg', image)
                 frame = buffer.tobytes()

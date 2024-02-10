@@ -21,8 +21,4 @@ class speak:
             7: "right hip"
         }
 
-        if index == -1:
-            speak("Hold the position and focus on your breathing.")
-        elif index in body_parts:
-            body_part = body_parts[index]
-            speak(f"Please straighten your {body_part}. Focus on maintaining a comfortable angle.")
+        
