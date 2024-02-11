@@ -1,16 +1,21 @@
-from flask import Flask, render_template, Response
-from flask_socketio import SocketIO
+from flask import Flask, render_template, Response, url_for, request, redirect, jsonify
+from flask_socketio import SocketIO, emit
 import YogaPose
 import mediapipe as mp
 import cv2
-import time
 import os
+import heatmap
+import threading
+import pyttsx3
 
 app = Flask(__name__)
 
 socket = SocketIO(app)
 
 global camera
+global yogaPose
+global genHeatMap 
+
 
 
 def landVal(i, j):
@@ -32,11 +37,19 @@ def landVal(i, j):
     except KeyError:
         return IndexError
 
+
 def clear_terminal():
     os.system('cls')
 
+
+def checkPoseCompletion(bool_list):
+    is_proper_pose = all(result[0] for result in bool_list)
+    return is_proper_pose
+
+
 class CamInput:
     def __init__(self) -> None:
+      
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_pose = mp.solutions.pose
         self.camera = cv2.VideoCapture(0)
@@ -54,19 +67,47 @@ class CamInput:
         self.y1 = 10
         self.org = (self.x1, self.y1)
         self.isStarted = False
+        self.isPoseCorrect = False
+        self.done = False
 
-    def gen_frames(self):
+    def genHeatMap(self,tempList):
+        obj = heatmap.heatMap()
+        obj.createHeatmap(tempList)
+
+    def speak(self,tempList):
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 150)  # Speed of speech
+        parts = []
+
+        body_parts = {
+            0: "elbow",
+            1: "knee",
+            2: "shoulder",
+            3: "hip",
+        }
+
+        for i in range(4):
+            if not tempList[i][0]:
+                parts.append(body_parts[i])
+        
+        if len(body_parts) > 1:
+            part = ', '.join(parts[:-1]) + ', and ' + parts[-1]
+        else:
+            part = parts[0]
+        
+        to_say = f'Correct your {part}'
+        engine.say(to_say)
+        engine.runAndWait()
+
+    def gen_frames(self, socket):
         self.frame_count = 0
-        frameRate = 30
-        timegiven = 5
+        global genHeatMap
+        genHeatMap = False
+        tts_thread = threading.Thread(target=self.speak)
+        tts_thread.start()
         with self.mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
             while self.camera.isOpened():
                 success, frame = self.camera.read()
-                if self.isStarted == True and self.frame_count < (frameRate*timegiven):
-                    self.frame_count += 1
-                elif self.isStarted == True and self.frame_count == (frameRate*timegiven):
-                    print('time up')
-                    self.isStarted = False
 
                 if not success:
                     break
@@ -85,7 +126,13 @@ class CamInput:
                 )
 
                 if res.pose_landmarks:
-                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, 'Trikonasana')
+                    temp_list = self.obj.matchYogaPos(res.pose_landmarks.landmark, yogaPose)
+
+                    if not self.isPoseCorrect:
+                        if checkPoseCompletion(temp_list):
+                            self.isPoseCorrect = True
+                            print(self.isPoseCorrect)
+                            socket.emit('complete')
 
                     for i in range(4):
                         if not temp_list[i][0]:
@@ -103,8 +150,19 @@ class CamInput:
                                 x1 = int(res.pose_landmarks.landmark[landVal(i, j)].x * self.width) + 3
                                 y1 = int(res.pose_landmarks.landmark[landVal(i, j)].y * self.height) + 3
                                 org1 = (x1, y1)
-                                cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color, self.thickness,
+                                cv2.putText(image, self.text, org1, self.fontFace, self.fontScale, color,
+                                            self.thickness,
                                             self.lineType)
+
+                if genHeatMap == True and self.done == False:
+                    self.genHeatMap(temp_list)
+                    self.done = True
+                
+                self.frame_count += 1
+
+                if self.frame_count%500 == 0:               
+                    self.speak(temp_list)
+                      
 
                 ret, buffer = cv2.imencode('.jpg', image)
                 frame = buffer.tobytes()
@@ -114,24 +172,36 @@ class CamInput:
     def close_cam(self):
         self.camera.release()
 
+
 global cam_obj
 
+#hello
 @app.route('/')
 def home():
+    json_url = url_for('static', filename='json/pose_details.json')
+    return render_template('index.html', json_url=json_url)
+
+
+@app.route('/perform', methods=['POST'])
+def perform():
+    global yogaPose
+    yogaPose = request.form.get('selected_pose')
+    print(yogaPose)
+    return redirect(url_for('yoga'))
+
+
+@app.route('/yoga')
+def yoga():
     global cam_obj
     cam_obj = CamInput()
-    return render_template('index.html')
+
+    return render_template('yoga.html', pose=yogaPose, poseComplete=cam_obj.isPoseCorrect)
 
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(cam_obj.gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(cam_obj.gen_frames(socket), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/start', methods=['POST'])
-def start():
-    cam_obj.isStarted = not cam_obj.isStarted #for testing only
-    #cam_obj.isStarted = True
-    return 'pose started'
 
 @app.route('/close_webcam', methods=['POST'])
 def close_webcam():
@@ -140,6 +210,16 @@ def close_webcam():
     # Release the camera resources
     cam_obj.close_cam()
     return "Webcam Closed"
+
+
+@socket.on('connect')
+def connect():
+    print('Socket Connected')
+
+@socket.on('heatmap')
+def conn():
+    global genHeatMap
+    genHeatMap = True 
 
 if __name__ == "__main__":
     socket.run(app, allow_unsafe_werkzeug=True, debug=True)
